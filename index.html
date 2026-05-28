@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -205,9 +206,11 @@ button {
 
 const INITIAL_SECONDS = 30 * 60;
 
-const timers = JSON.parse(localStorage.getItem('timers')) || [];
+const timers =
+JSON.parse(localStorage.getItem('timers')) || [];
 
-const groups = JSON.parse(localStorage.getItem('groups')) || {
+const groups =
+JSON.parse(localStorage.getItem('groups')) || {
 
   red: {
     start: 1,
@@ -274,28 +277,33 @@ function updateButtonColors() {
   for (let i = 1; i <= 17; i++) {
 
     const button =
-      document.getElementById(`start-${i}`);
+    document.getElementById(`start-${i}`);
 
     if (button) {
+
       button.style.background =
-        getButtonColor(i);
+      getButtonColor(i);
     }
   }
 }
 
 function getTimerColor(timer) {
 
-  if (!timer.running &&
-      timer.seconds === INITIAL_SECONDS) {
+  if (
+    !timer.running &&
+    timer.seconds === INITIAL_SECONDS
+  ) {
     return '#4AB3E0';
   }
 
-  if (timer.seconds < 60) {
+  if (timer.seconds < 0) {
     return '#E10F0F';
   }
 
-  if (timer.seconds <= 360 &&
-      !timer.acknowledged) {
+  if (
+    timer.seconds <= 300 &&
+    !timer.acknowledged
+  ) {
     return '#FFE11E';
   }
 
@@ -306,13 +314,13 @@ function formatTime(seconds) {
 
   const abs = Math.abs(seconds);
 
-  const mins = String(
-    Math.floor(abs / 60)
-  ).padStart(2, '0');
+  const mins =
+  String(Math.floor(abs / 60))
+  .padStart(2, '0');
 
-  const secs = String(
-    abs % 60
-  ).padStart(2, '0');
+  const secs =
+  String(abs % 60)
+  .padStart(2, '0');
 
   return seconds < 0
     ? `-${mins}:${secs}`
@@ -322,7 +330,7 @@ function formatTime(seconds) {
 function createTimers() {
 
   const grid =
-    document.getElementById('timerGrid');
+  document.getElementById('timerGrid');
 
   if (timers.length === 0) {
 
@@ -333,7 +341,8 @@ function createTimers() {
         seconds: INITIAL_SECONDS,
         running: false,
         acknowledged: false,
-        startedAt: null
+        startedAt: null,
+        endAt: null
       });
     }
 
@@ -344,7 +353,8 @@ function createTimers() {
 
   timers.forEach(timer => {
 
-    const card = document.createElement('div');
+    const card =
+    document.createElement('div');
 
     card.className = 'timer-card';
 
@@ -356,7 +366,8 @@ function createTimers() {
         No.${timer.id}
       </div>
 
-      <div class="time"
+      <div
+        class="time"
         id="time-${timer.id}">
         30:00
       </div>
@@ -392,14 +403,18 @@ function createTimers() {
     grid.appendChild(card);
 
     document
-      .getElementById(`start-${timer.id}`)
-      .onclick = () => {
+    .getElementById(`start-${timer.id}`)
+    .onclick = () => {
+
+      if (timer.running) return;
 
       timer.running = true;
 
-      if (!timer.startedAt) {
-        timer.startedAt = Date.now();
-      }
+      timer.startedAt = Date.now();
+
+      timer.endAt =
+      Date.now() +
+      (timer.seconds * 1000);
 
       sortTimers();
 
@@ -409,8 +424,8 @@ function createTimers() {
     };
 
     document
-      .getElementById(`five-${timer.id}`)
-      .onclick = () => {
+    .getElementById(`five-${timer.id}`)
+    .onclick = () => {
 
       timer.acknowledged = true;
 
@@ -420,8 +435,8 @@ function createTimers() {
     };
 
     document
-      .getElementById(`clear-${timer.id}`)
-      .onclick = () => {
+    .getElementById(`clear-${timer.id}`)
+    .onclick = () => {
 
       timer.running = false;
 
@@ -430,6 +445,8 @@ function createTimers() {
       timer.acknowledged = false;
 
       timer.startedAt = null;
+
+      timer.endAt = null;
 
       sortTimers();
 
@@ -447,20 +464,20 @@ function createTimers() {
 function sortTimers() {
 
   const grid =
-    document.getElementById('timerGrid');
+  document.getElementById('timerGrid');
 
   const cards =
-    Array.from(
-      document.querySelectorAll('.timer-card')
-    );
+  Array.from(
+    document.querySelectorAll('.timer-card')
+  );
 
   const runningCards = cards.filter(c => {
 
     const id =
-      Number(c.id.replace('card-', ''));
+    Number(c.id.replace('card-', ''));
 
     const t =
-      timers.find(timer => timer.id === id);
+    timers.find(timer => timer.id === id);
 
     return t.running;
   });
@@ -468,10 +485,10 @@ function sortTimers() {
   const stoppedCards = cards.filter(c => {
 
     const id =
-      Number(c.id.replace('card-', ''));
+    Number(c.id.replace('card-', ''));
 
     const t =
-      timers.find(timer => timer.id === id);
+    timers.find(timer => timer.id === id);
 
     return !t.running;
   });
@@ -479,16 +496,16 @@ function sortTimers() {
   runningCards.sort((a,b)=>{
 
     const aId =
-      Number(a.id.replace('card-', ''));
+    Number(a.id.replace('card-', ''));
 
     const bId =
-      Number(b.id.replace('card-', ''));
+    Number(b.id.replace('card-', ''));
 
     const aTimer =
-      timers.find(t=>t.id===aId);
+    timers.find(t=>t.id===aId);
 
     const bTimer =
-      timers.find(t=>t.id===bId);
+    timers.find(t=>t.id===bId);
 
     return aTimer.startedAt -
            bTimer.startedAt;
@@ -497,33 +514,33 @@ function sortTimers() {
   stoppedCards.sort((a,b)=>{
 
     const aId =
-      Number(a.id.replace('card-', ''));
+    Number(a.id.replace('card-', ''));
 
     const bId =
-      Number(b.id.replace('card-', ''));
+    Number(b.id.replace('card-', ''));
 
     return bId - aId;
   });
 
   [...runningCards, ...stoppedCards]
-    .forEach(card=>{
-      grid.appendChild(card);
-    });
+  .forEach(card=>{
+    grid.appendChild(card);
+  });
 }
 
 function updateCard(timer) {
 
   const card =
-    document.getElementById(`card-${timer.id}`);
+  document.getElementById(`card-${timer.id}`);
 
   const time =
-    document.getElementById(`time-${timer.id}`);
+  document.getElementById(`time-${timer.id}`);
 
   card.style.background =
-    getTimerColor(timer);
+  getTimerColor(timer);
 
   time.textContent =
-    formatTime(timer.seconds);
+  formatTime(timer.seconds);
 }
 
 setInterval(()=>{
@@ -532,7 +549,14 @@ setInterval(()=>{
 
     if (timer.running) {
 
-      timer.seconds--;
+      const now = Date.now();
+
+      const remaining =
+      Math.floor(
+        (timer.endAt - now) / 1000
+      );
+
+      timer.seconds = remaining;
 
       updateCard(timer);
     }
@@ -543,56 +567,62 @@ setInterval(()=>{
 },1000);
 
 document
-  .getElementById('settingsButton')
-  .onclick = ()=>{
+.getElementById('settingsButton')
+.onclick = ()=>{
 
   const panel =
-    document.getElementById('settingsPanel');
+  document.getElementById('settingsPanel');
 
   if (panel.style.display === 'block') {
+
     panel.style.display = 'none';
+
   } else {
+
     panel.style.display = 'block';
   }
 };
 
 function bindGroupSettings(name) {
 
-  document.getElementById(`${name}-start`)
-    .value = groups[name].start;
-
-  document.getElementById(`${name}-end`)
-    .value = groups[name].end;
-
-  document.getElementById(`${name}-color`)
-    .value = groups[name].color;
+  document
+  .getElementById(`${name}-start`)
+  .value = groups[name].start;
 
   document
-    .getElementById(`${name}-start`)
-    .oninput = (e)=>{
+  .getElementById(`${name}-end`)
+  .value = groups[name].end;
+
+  document
+  .getElementById(`${name}-color`)
+  .value = groups[name].color;
+
+  document
+  .getElementById(`${name}-start`)
+  .oninput = (e)=>{
 
     groups[name].start =
-      Number(e.target.value);
+    Number(e.target.value);
 
     saveGroups();
   };
 
   document
-    .getElementById(`${name}-end`)
-    .oninput = (e)=>{
+  .getElementById(`${name}-end`)
+  .oninput = (e)=>{
 
     groups[name].end =
-      Number(e.target.value);
+    Number(e.target.value);
 
     saveGroups();
   };
 
   document
-    .getElementById(`${name}-color`)
-    .oninput = (e)=>{
+  .getElementById(`${name}-color`)
+  .oninput = (e)=>{
 
     groups[name].color =
-      e.target.value;
+    e.target.value;
 
     saveGroups();
   };
