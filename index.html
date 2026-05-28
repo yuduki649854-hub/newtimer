@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>30分タイマー</title>
+
+<link rel="apple-touch-icon" href="IMG_3730.png">
+<link rel="icon" type="image/png" href="IMG_3730.png">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+
+<style>
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #f3f4f6;
+  font-family: Arial, sans-serif;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+body {
+  padding: 16px;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.settings-button {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  background: white;
+  font-size: 28px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.settings {
+  display: none;
+  background: white;
+  border-radius: 24px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.group-card {
+  background: #f5f5f5;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.group-card h3 {
+  margin-top: 0;
+}
+
+.group-inputs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.group-inputs input {
+  width: 70px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.timer-card {
+  border-radius: 24px;
+  padding: 20px;
+  color: white;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.timer-title {
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+
+.time {
+  font-size: 48px;
+  text-align: center;
+  margin-bottom: 24px;
+  font-weight: bold;
+}
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+button {
+  border: none;
+  border-radius: 16px;
+  padding: 14px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.five-btn {
+  background: rgba(255,255,255,0.85);
+}
+
+.clear-btn {
+  background: rgba(0,0,0,0.7);
+  color: white;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="top-bar">
+
+  <div class="title">
+    30分タイマー
+  </div>
+
+  <button class="settings-button" id="settingsButton">
+    ⚙️
+  </button>
+
+</div>
+
+<div class="settings" id="settingsPanel">
+
+  <h2>グループ設定</h2>
+
+  <div class="group-card">
+
+    <h3>赤グループ</h3>
+
+    <div class="group-inputs">
+      <input type="number" id="red-start">
+      <input type="number" id="red-end">
+    </div>
+
+    <input type="color" id="red-color">
+
+  </div>
+
+  <div class="group-card">
+
+    <h3>黄グループ</h3>
+
+    <div class="group-inputs">
+      <input type="number" id="yellow-start">
+      <input type="number" id="yellow-end">
+    </div>
+
+    <input type="color" id="yellow-color">
+
+  </div>
+
+  <div class="group-card">
+
+    <h3>緑グループ</h3>
+
+    <div class="group-inputs">
+      <input type="number" id="green-start">
+      <input type="number" id="green-end">
+    </div>
+
+    <input type="color" id="green-color">
+
+  </div>
+
+  <div class="group-card">
+
+    <h3>青グループ</h3>
+
+    <div class="group-inputs">
+      <input type="number" id="blue-start">
+      <input type="number" id="blue-end">
+    </div>
+
+    <input type="color" id="blue-color">
+
+  </div>
+
+</div>
+
+<div class="grid" id="timerGrid"></div>
+
+<script>
+
+const INITIAL_SECONDS = 30 * 60;
+
+const timers = JSON.parse(localStorage.getItem('timers')) || [];
+
+const groups = JSON.parse(localStorage.getItem('groups')) || {
+
+  red: {
+    start: 1,
+    end: 5,
+    color: '#FF5D52'
+  },
+
+  yellow: {
+    start: 6,
+    end: 9,
+    color: '#FFA703'
+  },
+
+  green: {
+    start: 10,
+    end: 14,
+    color: '#4CAF50'
+  },
+
+  blue: {
+    start: 15,
+    end: 17,
+    color: '#3143FF'
+  }
+};
+
+function saveGroups() {
+
+  localStorage.setItem(
+    'groups',
+    JSON.stringify(groups)
+  );
+
+  updateButtonColors();
+}
+
+function saveTimers() {
+
+  localStorage.setItem(
+    'timers',
+    JSON.stringify(timers)
+  );
+}
+
+function getButtonColor(index) {
+
+  for (const key in groups) {
+
+    const group = groups[key];
+
+    if (
+      index >= group.start &&
+      index <= group.end
+    ) {
+      return group.color;
+    }
+  }
+
+  return '#999';
+}
+
+function updateButtonColors() {
+
+  for (let i = 1; i <= 17; i++) {
+
+    const button =
+      document.getElementById(`start-${i}`);
+
+    if (button) {
+      button.style.background =
+        getButtonColor(i);
+    }
+  }
+}
+
+function getTimerColor(timer) {
+
+  if (!timer.running &&
+      timer.seconds === INITIAL_SECONDS) {
+    return '#4AB3E0';
+  }
+
+  if (timer.seconds < 60) {
+    return '#E10F0F';
+  }
+
+  if (timer.seconds <= 360 &&
+      !timer.acknowledged) {
+    return '#FFE11E';
+  }
+
+  return '#9E9E9E';
+}
+
+function formatTime(seconds) {
+
+  const abs = Math.abs(seconds);
+
+  const mins = String(
+    Math.floor(abs / 60)
+  ).padStart(2, '0');
+
+  const secs = String(
+    abs % 60
+  ).padStart(2, '0');
+
+  return seconds < 0
+    ? `-${mins}:${secs}`
+    : `${mins}:${secs}`;
+}
+
+function createTimers() {
+
+  const grid =
+    document.getElementById('timerGrid');
+
+  if (timers.length === 0) {
+
+    for (let i = 1; i <= 17; i++) {
+
+      timers.push({
+        id: i,
+        seconds: INITIAL_SECONDS,
+        running: false,
+        acknowledged: false,
+        startedAt: null
+      });
+    }
+
+    saveTimers();
+  }
+
+  timers.sort((a,b)=>b.id-a.id);
+
+  timers.forEach(timer => {
+
+    const card = document.createElement('div');
+
+    card.className = 'timer-card';
+
+    card.id = `card-${timer.id}`;
+
+    card.innerHTML = `
+
+      <div class="timer-title">
+        No.${timer.id}
+      </div>
+
+      <div class="time"
+        id="time-${timer.id}">
+        30:00
+      </div>
+
+      <div class="buttons">
+
+        <button
+          id="start-${timer.id}"
+          style="
+            background:
+            ${getButtonColor(timer.id)};
+            color:white;
+          "
+        >
+          ${timer.id}
+        </button>
+
+        <button
+          class="five-btn"
+          id="five-${timer.id}">
+          5分
+        </button>
+
+        <button
+          class="clear-btn"
+          id="clear-${timer.id}">
+          クリア
+        </button>
+
+      </div>
+    `;
+
+    grid.appendChild(card);
+
+    document
+      .getElementById(`start-${timer.id}`)
+      .onclick = () => {
+
+      timer.running = true;
+
+      if (!timer.startedAt) {
+        timer.startedAt = Date.now();
+      }
+
+      sortTimers();
+
+      saveTimers();
+
+      updateCard(timer);
+    };
+
+    document
+      .getElementById(`five-${timer.id}`)
+      .onclick = () => {
+
+      timer.acknowledged = true;
+
+      saveTimers();
+
+      updateCard(timer);
+    };
+
+    document
+      .getElementById(`clear-${timer.id}`)
+      .onclick = () => {
+
+      timer.running = false;
+
+      timer.seconds = INITIAL_SECONDS;
+
+      timer.acknowledged = false;
+
+      timer.startedAt = null;
+
+      sortTimers();
+
+      saveTimers();
+
+      updateCard(timer);
+    };
+
+    updateCard(timer);
+  });
+
+  sortTimers();
+}
+
+function sortTimers() {
+
+  const grid =
+    document.getElementById('timerGrid');
+
+  const cards =
+    Array.from(
+      document.querySelectorAll('.timer-card')
+    );
+
+  const runningCards = cards.filter(c => {
+
+    const id =
+      Number(c.id.replace('card-', ''));
+
+    const t =
+      timers.find(timer => timer.id === id);
+
+    return t.running;
+  });
+
+  const stoppedCards = cards.filter(c => {
+
+    const id =
+      Number(c.id.replace('card-', ''));
+
+    const t =
+      timers.find(timer => timer.id === id);
+
+    return !t.running;
+  });
+
+  runningCards.sort((a,b)=>{
+
+    const aId =
+      Number(a.id.replace('card-', ''));
+
+    const bId =
+      Number(b.id.replace('card-', ''));
+
+    const aTimer =
+      timers.find(t=>t.id===aId);
+
+    const bTimer =
+      timers.find(t=>t.id===bId);
+
+    return aTimer.startedAt -
+           bTimer.startedAt;
+  });
+
+  stoppedCards.sort((a,b)=>{
+
+    const aId =
+      Number(a.id.replace('card-', ''));
+
+    const bId =
+      Number(b.id.replace('card-', ''));
+
+    return bId - aId;
+  });
+
+  [...runningCards, ...stoppedCards]
+    .forEach(card=>{
+      grid.appendChild(card);
+    });
+}
+
+function updateCard(timer) {
+
+  const card =
+    document.getElementById(`card-${timer.id}`);
+
+  const time =
+    document.getElementById(`time-${timer.id}`);
+
+  card.style.background =
+    getTimerColor(timer);
+
+  time.textContent =
+    formatTime(timer.seconds);
+}
+
+setInterval(()=>{
+
+  timers.forEach(timer=>{
+
+    if (timer.running) {
+
+      timer.seconds--;
+
+      updateCard(timer);
+    }
+  });
+
+  saveTimers();
+
+},1000);
+
+document
+  .getElementById('settingsButton')
+  .onclick = ()=>{
+
+  const panel =
+    document.getElementById('settingsPanel');
+
+  if (panel.style.display === 'block') {
+    panel.style.display = 'none';
+  } else {
+    panel.style.display = 'block';
+  }
+};
+
+function bindGroupSettings(name) {
+
+  document.getElementById(`${name}-start`)
+    .value = groups[name].start;
+
+  document.getElementById(`${name}-end`)
+    .value = groups[name].end;
+
+  document.getElementById(`${name}-color`)
+    .value = groups[name].color;
+
+  document
+    .getElementById(`${name}-start`)
+    .oninput = (e)=>{
+
+    groups[name].start =
+      Number(e.target.value);
+
+    saveGroups();
+  };
+
+  document
+    .getElementById(`${name}-end`)
+    .oninput = (e)=>{
+
+    groups[name].end =
+      Number(e.target.value);
+
+    saveGroups();
+  };
+
+  document
+    .getElementById(`${name}-color`)
+    .oninput = (e)=>{
+
+    groups[name].color =
+      e.target.value;
+
+    saveGroups();
+  };
+}
+
+bindGroupSettings('red');
+bindGroupSettings('yellow');
+bindGroupSettings('green');
+bindGroupSettings('blue');
+
+createTimers();
+
+</script>
+
+</body>
+</html>
