@@ -148,7 +148,7 @@ button {
 
   <div class="group-card">
 
-    <h3>赤グループ</h3>
+    <h3>グループ1</h3>
 
     <div class="group-inputs">
       <input type="number" id="red-start">
@@ -161,7 +161,7 @@ button {
 
   <div class="group-card">
 
-    <h3>黄グループ</h3>
+    <h3>グループ2</h3>
 
     <div class="group-inputs">
       <input type="number" id="yellow-start">
@@ -174,7 +174,7 @@ button {
 
   <div class="group-card">
 
-    <h3>緑グループ</h3>
+    <h3>グループ3</h3>
 
     <div class="group-inputs">
       <input type="number" id="green-start">
@@ -187,7 +187,7 @@ button {
 
   <div class="group-card">
 
-    <h3>青グループ</h3>
+    <h3>グループ4</h3>
 
     <div class="group-inputs">
       <input type="number" id="blue-start">
@@ -296,12 +296,12 @@ function getTimerColor(timer) {
     return '#4AB3E0';
   }
 
-  if (timer.seconds < 0) {
+  if (timer.seconds < 60) {
     return '#E10F0F';
   }
 
   if (
-    timer.seconds <= 300 &&
+    timer.seconds <= 360 &&
     !timer.acknowledged
   ) {
     return '#FFE11E';
