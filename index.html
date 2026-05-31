@@ -36,22 +36,68 @@ body {
 }
 
 .settings-button {
- .status-bar {
-  display: flex;
-  flex-direction: row;
-  gap: 14px;
-  align-items: center;
+  width: 60px;
+  height: 60px;
+  border:none;
+  border-radius:50%;
+  background: white;
+  font-size:28px;
+  cursor:pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
 }
 
-.status-bar div {
+.status-bar {
+  display:flex;
+  flex-direction:row;
+  gap:14px;
+  align-items:center;
+}
+
+/* 上部ステータスバーの全パーツ共通のベースデザイン */
+.status-bar div, #nextWaitTime, .waiting-controls {
   background: white;
-  padding: 12px 20px;
+  height: 46px;                  /* 縦幅をコンパクトに調整 */
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
   border-radius: 999px;
-  font-weight: bold;
-  font-size: 24px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* 個別の微調整 */
+.status-bar div, #nextWaitTime {
+  padding: 0 14px;
+  font-weight: bold;
+  font-size: 18px;
   white-space: nowrap;
 }
+
+/* ＋－ボタンを包む白い枠組み */
+.waiting-controls {
+  padding: 0 6px;
+  gap: 6px;
+}
+
+/* ＋とーのボタン自体のデザイン */
+.waiting-controls button {
+  width: 34px;
+  height: 34px;
+  font-size: 20px;
+  font-weight: bold;
+  border: none;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #2563eb;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 押し心地を良くする設定 */
+.waiting-controls button:active {
+  background: #d1d5db;
 }
 
 .settings {
@@ -119,7 +165,8 @@ body {
   gap: 10px;
 }
 
-button {
+/* 下部のタイマーカード内の通常ボタン設定 */
+.timer-card button {
   border: none;
   border-radius: 16px;
   padding: 14px;
@@ -137,344 +184,367 @@ button {
   color: white;
 }
 
+.blink-red {
+  animation: blinkRed 1s infinite;
+}
+
+@keyframes blinkRed {
+  0% { background: #E10F0F; }
+  50% { background: #FFFFFF; color: #E10F0F; }
+  100% { background: #E10F0F; }
+}
+
+.blink-yellow{
+  animation: blinkYellow 1s infinite;
+}
+
+@keyframes blinkYellow{
+  0%{ background:#FFE11E; color:black; }
+  50%{ background:white; color:#FFE11E; }
+  100%{ background:#FFE11E; color:black; }
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 9999;
+}
+
+.modal-content {
+  background: white;
+  width: 90%;
+  max-width: 500px;
+  margin: 50px auto;
+  padding: 20px;
+  border-radius: 20px;
+  color: black;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+.modal-content h2 {
+  margin-top: 0;
+}
+
+/* シミュレーター用のデザイン調整 */
+.calc-display-box {
+  background: #f3f4f6;
+  border-radius: 16px;
+  padding: 12px;
+  font-size: 28px;
+  font-weight: bold;
+  color: #1f2937;
+  margin-bottom: 15px;
+  display: inline-block;
+  min-width: 120px;
+  text-align: center;
+  border: 2px solid #e5e7eb;
+}
+
+.calc-result {
+  font-size: 32px;
+  font-weight: bold;
+  color: #2563eb;
+  margin: 10px 0;
+}
+
 </style>
 </head>
 
 <body>
 
-<div class="top-bar">
+<div class="top-bar" style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px; width: 100%; box-sizing: border-box;">
+  <button class="settings-button" id="settingsButton" style="width: 46px; height: 46px; font-size: 20px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0;">⚙️</button>
+  <button class="settings-button" id="statsButton" style="width: 46px; height: 46px; font-size: 20px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0;">📊</button>
+  <button class="settings-button" id="calcButton" style="width: 46px; height: 46px; font-size: 20px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0; background: #e0f2fe; border: 1px solid #bae6fd;">🔢</button>
 
-  <button class="settings-button" id="settingsButton">
-    ⚙️
-  </button>
+  <div class="status-bar" style="display: flex; flex-direction: row; gap: 8px; align-items: center; flex-grow: 1; width: auto;">
+    <div id="waitingCountDisplay">待ち 0組</div>
+    
+    <div class="waiting-controls">
+      <button id="addWaiting">＋</button>
+      <button id="removeWaiting">－</button>
+    </div>
 
-<div class="status-bar">
+    <div id="nextWaitTime">次の待ち時間 : 0分</div>
+    
+    <div style="flex-grow: 1; background: transparent; box-shadow: none; height: auto; padding: 0; margin: 0;"></div>
 
-  <div id="runningCount">
-    🟦空席 0
+    <div id="runningCount">空席 0</div>
+    <div id="warningCount">残り20分 0</div>
+    <div id="finishedCount">残り10分 0</div>
   </div>
-
-  <div id="warningCount">
-    🟨5分 0
-  </div>
-
-  <div id="finishedCount">
-    🟥終了待ち 0
-  </div>
-
-</div>
 </div>
 
 <div class="settings" id="settingsPanel">
-
   <h2>グループ設定</h2>
-
   <div class="group-card">
-
     <h3>グループ1</h3>
-
     <div class="group-inputs">
       <input type="number" id="red-start">
       <input type="number" id="red-end">
     </div>
-
     <input type="color" id="red-color">
-
   </div>
 
   <div class="group-card">
-
     <h3>グループ2</h3>
-
     <div class="group-inputs">
       <input type="number" id="yellow-start">
       <input type="number" id="yellow-end">
     </div>
-
     <input type="color" id="yellow-color">
-
   </div>
 
   <div class="group-card">
-
     <h3>グループ3</h3>
-
     <div class="group-inputs">
       <input type="number" id="green-start">
       <input type="number" id="green-end">
     </div>
-
     <input type="color" id="green-color">
-
   </div>
 
   <div class="group-card">
-
     <h3>グループ4</h3>
-
     <div class="group-inputs">
       <input type="number" id="blue-start">
       <input type="number" id="blue-end">
     </div>
-
     <input type="color" id="blue-color">
-
   </div>
+</div>
 
+<div id="peopleModal" class="modal">
+  <div class="modal-content" style="text-align: center; max-width: 400px;">
+    <h2 id="peopleModalTitle">人数を選択してください</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0;">
+      <button class="five-btn" onclick="selectPeople(1)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">1</button>
+      <button class="five-btn" onclick="selectPeople(2)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">2</button>
+      <button class="five-btn" onclick="selectPeople(3)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">3</button>
+      <button class="five-btn" onclick="selectPeople(4)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">4</button>
+      <button class="five-btn" onclick="selectPeople(5)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">5</button>
+      <button class="five-btn" onclick="selectPeople(6)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">6</button>
+      <button class="five-btn" onclick="selectPeople(7)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">7</button>
+      <button class="five-btn" onclick="selectPeople(8)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">8</button>
+      <button class="five-btn" onclick="selectPeople(9)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">9</button>
+    </div>
+    <button class="clear-btn" id="closePeopleModal" style="width: 100%; padding: 12px; font-size:16px;">キャンセル</button>
+  </div>
+</div>
+
+<div id="statsModal" class="modal">
+  <div class="modal-content">
+    <h2>📊 体験人数集計</h2>
+    <div id="statsContent"></div>
+    <button class="clear-btn" id="closeStats" style="width: 100%; padding: 12px; font-size:16px; margin-top: 15px;">
+      閉じる
+    </button>
+  </div>
+</div>
+
+<div id="calcModal" class="modal">
+  <div class="modal-content" style="text-align: center; max-width: 400px;">
+    <h2>🔢 待ち時間シミュレーター</h2>
+    <p style="font-size: 14px; color: #555; margin-bottom: 10px;">調べたい「組数」を下のボタンで入力してください</p>
+    
+    <div>
+      <div id="calcInputDisplay" class="calc-display-box">1</div>
+      <span style="font-size: 22px; font-weight: bold; margin-left: 8px;">組目</span>
+    </div>
+
+    <div style="background: #f0fdf4; padding: 12px; border-radius: 16px; border: 1px solid #bbf7d0; margin-bottom: 15px;">
+      <div style="font-size: 14px; font-weight: bold; color: #16a34a;">予測される待ち時間</div>
+      <div id="calcResultDisplay" class="calc-result">約 0 分</div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 15px;">
+      <button class="five-btn" onclick="pressCalcNum(1)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">1</button>
+      <button class="five-btn" onclick="pressCalcNum(2)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">2</button>
+      <button class="five-btn" onclick="pressCalcNum(3)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">3</button>
+      <button class="five-btn" onclick="pressCalcNum(4)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">4</button>
+      <button class="five-btn" onclick="pressCalcNum(5)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">5</button>
+      <button class="five-btn" onclick="pressCalcNum(6)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">6</button>
+      <button class="five-btn" onclick="pressCalcNum(7)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">7</button>
+      <button class="five-btn" onclick="pressCalcNum(8)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">8</button>
+      <button class="five-btn" onclick="pressCalcNum(9)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">9</button>
+      <button class="clear-btn" onclick="clearCalcNum()" style="background:#ef4444; color:white; font-size:18px; padding:12px; font-weight:bold;">クリア</button>
+      <button class="five-btn" onclick="pressCalcNum(0)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">0</button>
+      <button class="clear-btn" onclick="backspaceCalcNum()" style="background:#f59e0b; color:white; font-size:18px; padding:12px; font-weight:bold;">⌫ 戻る</button>
+    </div>
+
+    <button class="clear-btn" id="closeCalc" style="width: 100%; padding: 12px; font-size:16px;">
+      閉じる
+    </button>
+  </div>
 </div>
 
 <div class="grid" id="timerGrid"></div>
 
 <script>
 
+let stats =
+JSON.parse(
+  localStorage.getItem('stats')
+) ||
+{
+  totalGroups: 0,
+  totalPeople: 0,
+  hourly: {}
+};
+
 const INITIAL_SECONDS = 30 * 60;
+let waitingList = JSON.parse(localStorage.getItem('waitingList')) || [];
+let waitingCount = waitingList.length;
 
 const timers =
-JSON.parse(localStorage.getItem('timers')) || [];
+JSON.parse(localStorage.getItem('timers')) ||
+[];
 
 const groups =
 JSON.parse(localStorage.getItem('groups')) || {
-
-  red: {
-    start: 1,
-    end: 5,
-    color: '#FF5D52'
-  },
-
-  yellow: {
-    start: 6,
-    end: 9,
-    color: '#FFA703'
-  },
-
-  green: {
-    start: 10,
-    end: 14,
-    color: '#4CAF50'
-  },
-
-  blue: {
-    start: 15,
-    end: 17,
-    color: '#3143FF'
-  }
+  red: { start: 1, end: 5, color: '#FF5D52' },
+  yellow: { start: 6, end: 9, color: '#FFA703' },
+  green: { start: 10, end: 14, color: '#4CAF50' },
+  blue: { start: 15, end: 17, color: '#3143FF' }
 };
 
+let currentAction = null; 
+let currentTargetTimer = null;
+
+// シミュレーターの入力数値を保持する内部変数
+let calcInputString = "1";
+let isFirstInput = true; // 開いた直後の入力を上書きするためのフラグ
+
 function saveGroups() {
-
-  localStorage.setItem(
-    'groups',
-    JSON.stringify(groups)
-  );
-
+  localStorage.setItem('groups', JSON.stringify(groups));
   updateButtonColors();
 }
 
 function saveTimers() {
-
-  localStorage.setItem(
-    'timers',
-    JSON.stringify(timers)
-  );
+  localStorage.setItem('timers', JSON.stringify(timers));
 }
 
 function getButtonColor(index) {
-
   for (const key in groups) {
-
     const group = groups[key];
-
-    if (
-      index >= group.start &&
-      index <= group.end
-    ) {
+    if (index >= group.start && index <= group.end) {
       return group.color;
     }
   }
-
   return '#999';
 }
 
 function updateButtonColors() {
-
   for (let i = 1; i <= 17; i++) {
-
-    const button =
-    document.getElementById(`start-${i}`);
-
+    const button = document.getElementById(`start-${i}`);
     if (button) {
-
-      button.style.background =
-      getButtonColor(i);
+      button.style.background = getButtonColor(i);
     }
   }
 }
 
 function getTimerColor(timer) {
-
-  if (
-    !timer.running &&
-    timer.seconds === INITIAL_SECONDS
-  ) {
+  if (!timer.running && timer.seconds === INITIAL_SECONDS) {
     return '#4AB3E0';
   }
-
-  if (timer.seconds < 60) {
+  if (timer.seconds < 60 && timer.voiceChecked) {
     return '#E10F0F';
   }
-
-  if (
-    timer.seconds <= 360 &&
-    !timer.acknowledged
-  ) {
+  if (timer.seconds <= 360 && timer.seconds >= 60 && timer.acknowledged) {
     return '#FFE11E';
   }
-
   return '#9E9E9E';
 }
 
 function formatTime(seconds) {
-
   const abs = Math.abs(seconds);
-
-  const mins =
-  String(Math.floor(abs / 60))
-  .padStart(2, '0');
-
-  const secs =
-  String(abs % 60)
-  .padStart(2, '0');
-
-  return seconds < 0
-    ? `-${mins}:${secs}`
-    : `${mins}:${secs}`;
+  const mins = String(Math.floor(abs / 60)).padStart(2, '0');
+  const secs = String(abs % 60).padStart(2, '0');
+  return seconds < 0 ? `-${mins}:${secs}` : `${mins}:${secs}`;
 }
 
 function createTimers() {
-
-  const grid =
-  document.getElementById('timerGrid');
+  const grid = document.getElementById('timerGrid');
 
   if (timers.length === 0) {
-
     for (let i = 1; i <= 17; i++) {
-
       timers.push({
         id: i,
         seconds: INITIAL_SECONDS,
         running: false,
         acknowledged: false,
+        voiceChecked: false,
         startedAt: null,
         endAt: null
       });
     }
-
     saveTimers();
   }
 
   timers.sort((a,b)=>b.id-a.id);
 
   timers.forEach(timer => {
-
-    const card =
-    document.createElement('div');
-
+    const card = document.createElement('div');
     card.className = 'timer-card';
-
     card.id = `card-${timer.id}`;
 
     card.innerHTML = `
-
-      <div class="timer-title">
-        No.${timer.id}
-      </div>
-
-      <div
-        class="time"
-        id="time-${timer.id}">
-        30:00
-      </div>
-
+      <div class="timer-title">No.${timer.id}</div>
+      <div class="time" id="time-${timer.id}">30:00</div>
       <div class="buttons">
-
-        <button
-          id="start-${timer.id}"
-          style="
-            background:
-            ${getButtonColor(timer.id)};
-            color:white;
-          "
-        >
+        <button id="start-${timer.id}" style="background:${getButtonColor(timer.id)}; color:white;">
           ${timer.id}
         </button>
-
-        <button
-          class="five-btn"
-          id="five-${timer.id}">
-          5分
-        </button>
-
-        <button
-          class="clear-btn"
-          id="clear-${timer.id}">
-          クリア
-        </button>
-
+        <button class="five-btn" id="five-${timer.id}">声かけ済</button>
+        <button class="clear-btn" id="clear-${timer.id}">クリア</button>
       </div>
     `;
 
     grid.appendChild(card);
 
-    document
-    .getElementById(`start-${timer.id}`)
-    .onclick = () => {
-
+    document.getElementById(`start-${timer.id}`).onclick = () => {
       if (timer.running) return;
 
-      timer.running = true;
+      if (waitingList.length > 0) {
+        const peopleCount = waitingList.shift();
+        waitingCount = waitingList.length;
+        localStorage.setItem('waitingList', JSON.stringify(waitingList));
+        localStorage.setItem('waitingCount', waitingCount);
+        
+        startTimerWithPeople(timer, peopleCount);
+      } else {
+        currentAction = 'directStart';
+        currentTargetTimer = timer;
+        document.getElementById('peopleModalTitle').textContent = `No.${timer.id} の体験人数`;
+        document.getElementById('peopleModal').style.display = 'block';
+      }
+    };
 
-      timer.startedAt = Date.now();
-
-      timer.endAt =
-      Date.now() +
-      (timer.seconds * 1000);
-
-      sortTimers();
-
+    document.getElementById(`five-${timer.id}`).onclick = () => {
+      if (!timer.running) return;
+      if (timer.seconds < 60) {
+        timer.voiceChecked = true;
+      } else if (timer.seconds <= 360) {
+        timer.acknowledged = true;
+      }
       saveTimers();
-
       updateCard(timer);
     };
 
-    document
-    .getElementById(`five-${timer.id}`)
-    .onclick = () => {
-
-      timer.acknowledged = true;
-
-      saveTimers();
-
-      updateCard(timer);
-    };
-
-    document
-    .getElementById(`clear-${timer.id}`)
-    .onclick = () => {
-
+    document.getElementById(`clear-${timer.id}`).onclick = () => {
       timer.running = false;
-
       timer.seconds = INITIAL_SECONDS;
-
       timer.acknowledged = false;
-
+      timer.voiceChecked = false;
       timer.startedAt = null;
-
       timer.endAt = null;
-
-      sortTimers();
-
       saveTimers();
-
+      sortTimers();
       updateCard(timer);
     };
 
@@ -484,218 +554,344 @@ function createTimers() {
   sortTimers();
 }
 
+function startTimerWithPeople(timer, peopleCount) {
+  timer.running = true;
+
+  const nowHour = new Date().getHours();
+  stats.totalGroups = (stats.totalGroups || 0) + 1;
+  stats.totalPeople = (stats.totalPeople || 0) + peopleCount;
+  if (!stats.hourly[nowHour]) {
+    stats.hourly[nowHour] = { groups: 0, people: 0 };
+  }
+  stats.hourly[nowHour].groups++;
+  stats.hourly[nowHour].people += peopleCount;
+  localStorage.setItem('stats', JSON.stringify(stats));
+
+  timer.startedAt = Date.now();
+  timer.endAt = Date.now() + (timer.seconds * 1000);
+
+  sortTimers();
+  saveTimers();
+  updateCard(timer);
+}
+
+function selectPeople(num) {
+  if (currentAction === 'addWaiting') {
+    waitingList.push(num);
+    waitingCount = waitingList.length;
+    localStorage.setItem('waitingList', JSON.stringify(waitingList));
+    localStorage.setItem('waitingCount', waitingCount);
+  } else if (currentAction === 'directStart' && currentTargetTimer) {
+    startTimerWithPeople(currentTargetTimer, num);
+  }
+  
+  document.getElementById('peopleModal').style.display = 'none';
+  currentAction = null;
+  currentTargetTimer = null;
+  updateStatusCounts();
+}
+
 function sortTimers() {
-
-  const grid =
-  document.getElementById('timerGrid');
-
-  const cards =
-  Array.from(
-    document.querySelectorAll('.timer-card')
-  );
+  const grid = document.getElementById('timerGrid');
+  const cards = Array.from(document.querySelectorAll('.timer-card'));
 
   const runningCards = cards.filter(c => {
-
-    const id =
-    Number(c.id.replace('card-', ''));
-
-    const t =
-    timers.find(timer => timer.id === id);
-
+    const id = Number(c.id.replace('card-', ''));
+    const t = timers.find(timer => timer.id === id);
     return t.running;
   });
 
   const stoppedCards = cards.filter(c => {
-
-    const id =
-    Number(c.id.replace('card-', ''));
-
-    const t =
-    timers.find(timer => timer.id === id);
-
+    const id = Number(c.id.replace('card-', ''));
+    const t = timers.find(timer => timer.id === id);
     return !t.running;
   });
 
   runningCards.sort((a,b)=>{
-
-    const aId =
-    Number(a.id.replace('card-', ''));
-
-    const bId =
-    Number(b.id.replace('card-', ''));
-
-    const aTimer =
-    timers.find(t=>t.id===aId);
-
-    const bTimer =
-    timers.find(t=>t.id===bId);
-
-    return aTimer.startedAt -
-           bTimer.startedAt;
+    const aId = Number(a.id.replace('card-', ''));
+    const bId = Number(b.id.replace('card-', ''));
+    const aTimer = timers.find(t=>t.id===aId);
+    const bTimer = timers.find(t=>t.id===bId);
+    return aTimer.startedAt - bTimer.startedAt;
   });
 
   stoppedCards.sort((a,b)=>{
-
-    const aId =
-    Number(a.id.replace('card-', ''));
-
-    const bId =
-    Number(b.id.replace('card-', ''));
-
+    const aId = Number(a.id.replace('card-', ''));
+    const bId = Number(b.id.replace('card-', ''));
     return bId - aId;
   });
 
-  [...runningCards, ...stoppedCards]
-  .forEach(card=>{
+  [...runningCards, ...stoppedCards].forEach(card=>{
     grid.appendChild(card);
   });
 }
 
 function updateCard(timer) {
+  const card = document.getElementById(`card-${timer.id}`);
+  const time = document.getElementById(`time-${timer.id}`);
+  
+  card.classList.remove('blink-yellow', 'blink-red');
 
-  const card =
-  document.getElementById(`card-${timer.id}`);
+  if (timer.seconds <= 360 && timer.seconds >= 60 && !timer.acknowledged) {
+    card.classList.add('blink-yellow');
+  } else if (timer.seconds < 60 && !timer.voiceChecked) {
+    card.classList.add('blink-red');
+  } else {
+    card.style.background = getTimerColor(timer);
+  }
 
-  const time =
-  document.getElementById(`time-${timer.id}`);
-
-  card.style.background =
-  getTimerColor(timer);
-
-  time.textContent =
-  formatTime(timer.seconds);
+  time.textContent = formatTime(timer.seconds);
 }
 
 function updateStatusCounts() {
+  const stopped = timers.filter(t => !t.running).length;
+  const twentyMinutes = timers.filter(t => t.running && t.seconds <= 1200).length;
+  const tenMinutes = timers.filter(t => t.running && t.seconds <= 600).length;
 
-  const stopped =
-    timers.filter(t =>
-      !t.running
-    ).length;
+  document.getElementById('runningCount').textContent = `空席 : ${stopped}`;
+  document.getElementById('warningCount').textContent = `残り20分 : ${twentyMinutes}`;
+  document.getElementById('finishedCount').textContent = `残り10分 : ${tenMinutes}`;
+  document.getElementById('waitingCountDisplay').textContent = `待ち ${waitingCount}組`;
 
-  const warning =
-    timers.filter(t =>
-      t.running &&
-      t.seconds <= 360 &&
-      t.seconds >= 60
-    ).length;
+  const activeTimers = timers
+    .filter(t => t.running && t.seconds > 0)
+    .sort((a,b) => a.seconds - b.seconds);
 
-  const finished =
-    timers.filter(t =>
-      t.seconds < 60
-    ).length;
+  let nextWaitMinutes = 0;
 
-  document.getElementById(
-    'runningCount'
-  ).textContent =
-    `🟦空席　　：${stopped}`;
+  if (waitingCount > 0 || (stopped === 0 && activeTimers.length > 0)) {
+    if (activeTimers.length === 0) {
+      nextWaitMinutes = 0;
+    } else {
+      const cycle = Math.floor(waitingCount / activeTimers.length);
+      const position = waitingCount % activeTimers.length;
+      const waitSeconds = activeTimers[position].seconds + (cycle * 1800);
+      nextWaitMinutes = Math.ceil(waitSeconds / 60);
+    }
+  } else {
+    nextWaitMinutes = 0;
+  }
 
-  document.getElementById(
-    'warningCount'
-  ).textContent =
-    `🟨残り５分：${warning}`;
-
-  document.getElementById(
-    'finishedCount'
-  ).textContent =
-    `🟥終了待ち：${finished}`;
+  document.getElementById('nextWaitTime').textContent = `次の待ち時間 : ${nextWaitMinutes}分`;
 }
 
+function calculateCustomWait(targetCount) {
+  const stopped = timers.filter(t => !t.running).length;
+  if (stopped >= targetCount) {
+    return 0;
+  }
+  const activeTimers = timers
+    .filter(t => t.running && t.seconds > 0)
+    .sort((a,b) => a.seconds - b.seconds);
+
+  if (activeTimers.length === 0) {
+    return 0;
+  }
+  const effectiveWaitCount = targetCount - stopped - 1; 
+  const cycle = Math.floor(effectiveWaitCount / activeTimers.length);
+  const position = effectiveWaitCount % activeTimers.length;
+  const waitSeconds = activeTimers[position].seconds + (cycle * 1800);
+  
+  return Math.ceil(waitSeconds / 60);
+}
+
+// リアルタイム更新ループ
 setInterval(()=>{
-
   timers.forEach(timer=>{
-
     if (timer.running) {
-
       const now = Date.now();
-
-      const remaining =
-      Math.floor(
-        (timer.endAt - now) / 1000
-      );
-
+      const remaining = Math.floor((timer.endAt - now) / 1000);
       timer.seconds = remaining;
-
       updateCard(timer);
     }
   });
-
   saveTimers();
+  updateStatusCounts();
+  
+  if (document.getElementById('calcModal').style.display === 'block') {
+    const currentNum = Number(calcInputString) || 0;
+    const resultMins = calculateCustomWait(currentNum);
+    document.getElementById('calcResultDisplay').textContent = `約 ${resultMins} 分`;
+  }
+}, 1000);
 
-updateStatusCounts();
-
-},1000);
-
-document
-.getElementById('settingsButton')
-.onclick = ()=>{
-
-  const panel =
-  document.getElementById('settingsPanel');
-
+document.getElementById('settingsButton').onclick = ()=>{
+  const panel = document.getElementById('settingsPanel');
   if (panel.style.display === 'block') {
-
     panel.style.display = 'none';
-
   } else {
-
     panel.style.display = 'block';
   }
 };
 
 function bindGroupSettings(name) {
+  document.getElementById(`${name}-start`).value = groups[name].start;
+  document.getElementById(`${name}-end`).value = groups[name].end;
+  document.getElementById(`${name}-color`).value = groups[name].color;
 
-  document
-  .getElementById(`${name}-start`)
-  .value = groups[name].start;
-
-  document
-  .getElementById(`${name}-end`)
-  .value = groups[name].end;
-
-  document
-  .getElementById(`${name}-color`)
-  .value = groups[name].color;
-
-  document
-  .getElementById(`${name}-start`)
-  .oninput = (e)=>{
-
-    groups[name].start =
-    Number(e.target.value);
-
+  document.getElementById(`${name}-start`).oninput = (e)=>{
+    groups[name].start = Number(e.target.value);
     saveGroups();
   };
-
-  document
-  .getElementById(`${name}-end`)
-  .oninput = (e)=>{
-
-    groups[name].end =
-    Number(e.target.value);
-
+  document.getElementById(`${name}-end`).oninput = (e)=>{
+    groups[name].end = Number(e.target.value);
     saveGroups();
   };
-
-  document
-  .getElementById(`${name}-color`)
-  .oninput = (e)=>{
-
-    groups[name].color =
-    e.target.value;
-
+  document.getElementById(`${name}-color`).oninput = (e)=>{
+    groups[name].color = e.target.value;
     saveGroups();
   };
 }
+
+document.getElementById('addWaiting').onclick = () => {
+  currentAction = 'addWaiting';
+  document.getElementById('peopleModalTitle').textContent = "お待ちになる人数";
+  document.getElementById('peopleModal').style.display = 'block';
+};
+
+document.getElementById('removeWaiting').onclick = () => {
+  if (waitingList.length > 0) {
+    waitingList.pop();
+    waitingCount = waitingList.length;
+
+    localStorage.setItem('waitingList', JSON.stringify(waitingList));
+    localStorage.setItem('waitingCount', waitingCount);
+    updateStatusCounts();
+  }
+};
 
 bindGroupSettings('red');
 bindGroupSettings('yellow');
 bindGroupSettings('green');
 bindGroupSettings('blue');
 
-createTimers();
-  updateStatusCounts();
+document.getElementById('statsButton').onclick = () => {
+  const statsContent = document.getElementById('statsContent');
+  let html = `
+    <p><strong>累計来店:</strong> ${stats.totalGroups || 0} 組 / ${stats.totalPeople || 0} 人</p>
+    <p style="font-size:14px; color:#666;">（1組あたりの平均: ${stats.totalGroups ? Math.round((stats.totalPeople / stats.totalGroups) * 10) / 10 : 0} 人）</p>
+    <hr>
+    <h3>時間帯別の来店集計</h3>
+    <table style="width:100%; border-collapse: collapse; margin-top:10px; font-size:15px;">
+      <thead>
+        <tr style="background:#eee; text-align:left;">
+          <th style="padding:8px; border:1px solid #ccc;">時間帯</th>
+          <th style="padding:8px; border:1px solid #ccc;">組数</th>
+          <th style="padding:8px; border:1px solid #ccc;">人数</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
 
+  let hasData = false;
+  for (let h = 0; h < 24; h++) {
+    const data = stats.hourly[h];
+    if (data) {
+      hasData = true;
+      const gCount = typeof data === 'number' ? data : (data.groups || 0);
+      const pCount = typeof data === 'number' ? data * 2 : (data.people || 0);
+
+      html += `
+        <tr>
+          <td style="padding:8px; border:1px solid #ccc;">${h}時 〜 ${h+1}時</td>
+          <td style="padding:8px; border:1px solid #ccc;">${gCount} 組</td>
+          <td style="padding:8px; border:1px solid #ccc;">${pCount} 人</td>
+        </tr>
+      `;
+    }
+  }
+
+  if (!hasData) {
+    html += `<tr><td colspan="3" style="padding:8px; border:1px solid #ccc; text-align:center; color:#999;">本日のデータはありません</td></tr>`;
+  }
+
+  html += `
+      </tbody>
+    </table>
+    <button id="resetStats" style="background:#ff4d4d; color:white; margin-top:20px; width:100%; padding:10px; border-radius:10px; font-weight:bold; cursor:pointer;">
+      データをリセットする
+    </button>
+  `;
+  statsContent.innerHTML = html;
+
+  document.getElementById('resetStats').onclick = () => {
+    if (confirm('集計データをすべてリセットしますか？')) {
+      stats = { totalGroups: 0, totalPeople: 0, hourly: {} };
+      localStorage.setItem('stats', JSON.stringify(stats));
+      document.getElementById('statsButton').click();
+    }
+  };
+
+  document.getElementById('statsModal').style.display = 'block';
+};
+
+document.getElementById('closeStats').onclick = () => {
+  document.getElementById('statsModal').style.display = 'none';
+};
+
+document.getElementById('closePeopleModal').onclick = () => {
+  document.getElementById('peopleModal').style.display = 'none';
+  currentAction = null;
+  currentTargetTimer = null;
+};
+
+/* 画面タッチ用の数字入力処理（2桁以上の電卓入力に対応） */
+function updateCalcScreen() {
+  document.getElementById('calcInputDisplay').textContent = calcInputString === "" ? "0" : calcInputString;
+  
+  const currentNum = Number(calcInputString) || 0;
+  const mins = calculateCustomWait(currentNum);
+  document.getElementById('calcResultDisplay').textContent = `約 ${mins} 分`;
+}
+
+function pressCalcNum(num) {
+  // 開いた直後の最初の1タップ目は、初期値を上書きする
+  if (isFirstInput) {
+    calcInputString = String(num);
+    isFirstInput = false;
+  } else {
+    if (calcInputString === "0") {
+      calcInputString = String(num);
+    } else {
+      // 最大3桁（999組）までに制限
+      if (calcInputString.length < 3) {
+        calcInputString += String(num);
+      }
+    }
+  }
+  updateCalcScreen();
+}
+
+function clearCalcNum() {
+  calcInputString = "0";
+  isFirstInput = false;
+  updateCalcScreen();
+}
+
+function backspaceCalcNum() {
+  isFirstInput = false;
+  if (calcInputString.length > 1) {
+    calcInputString = calcInputString.slice(0, -1);
+  } else {
+    calcInputString = "0";
+  }
+  updateCalcScreen();
+}
+
+document.getElementById('calcButton').onclick = () => {
+  // 開いたときは「現在の待ち組数 + 1」を自動セット
+  calcInputString = String(waitingCount + 1);
+  isFirstInput = true; // 新規入力待ち状態にする
+  updateCalcScreen();
+  document.getElementById('calcModal').style.display = 'block';
+};
+
+document.getElementById('closeCalc').onclick = () => {
+  document.getElementById('calcModal').style.display = 'none';
+};
+
+createTimers();
+updateStatusCounts();
 </script>
 
 </body>
