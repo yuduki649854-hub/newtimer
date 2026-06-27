@@ -7,8 +7,8 @@
 
 <title>30分タイマー</title>
 
-<link rel="apple-touch-icon" href="IMG_3730.png">
-<link rel="icon" type="image/png" href="IMG_3730.png">
+<link class="apple-touch-icon" href="IMG_3730.png">
+<link class="icon" type="image/png" href="IMG_3730.png">
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -224,13 +224,14 @@ body {
   border-radius: 20px;
   color: black;
   box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  box-sizing: border-box;
 }
 
 .modal-content h2 {
   margin-top: 0;
 }
 
-/* シミュレーター用のデザイン調整 */
+/* シミュレーター・人数入力用の共通デザイン調整 */
 .calc-display-box {
   background: #f3f4f6;
   border-radius: 16px;
@@ -250,6 +251,41 @@ body {
   font-weight: bold;
   color: #2563eb;
   margin: 10px 0;
+}
+
+/* 集計表内の一時的な調整＋ーボタン用スタイル */
+.stats-btn {
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+  font-weight: bold;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 2px;
+  vertical-align: middle;
+}
+.stats-btn:active {
+  background: #e5e7eb;
+}
+.stats-btn.plus {
+  color: #2563eb;
+}
+.stats-btn.minus {
+  color: #ef4444;
+}
+
+/* ★修正：集計データ画面のスクロール対応スタイル */
+.stats-scroll-container {
+  max-height: 60vh;           /* 画面縦幅の60%を超えたらスクロール */
+  overflow-y: auto;           /* 縦スクロールを有効にする */
+  padding-right: 4px;         /* スクロールバー用の余白 */
+  margin-bottom: 15px;
+  -webkit-overflow-scrolling: touch; /* iOSでのスクロールを滑らかにする */
 }
 
 </style>
@@ -319,29 +355,44 @@ body {
   </div>
 </div>
 
+<!-- 体験人数選択モーダル（2桁入力対応の電卓型UI） -->
 <div id="peopleModal" class="modal">
   <div class="modal-content" style="text-align: center; max-width: 400px;">
     <h2 id="peopleModalTitle">人数を選択してください</h2>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0;">
-      <button class="five-btn" onclick="selectPeople(1)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">1</button>
-      <button class="five-btn" onclick="selectPeople(2)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">2</button>
-      <button class="five-btn" onclick="selectPeople(3)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">3</button>
-      <button class="five-btn" onclick="selectPeople(4)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">4</button>
-      <button class="five-btn" onclick="selectPeople(5)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">5</button>
-      <button class="five-btn" onclick="selectPeople(6)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">6</button>
-      <button class="five-btn" onclick="selectPeople(7)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">7</button>
-      <button class="five-btn" onclick="selectPeople(8)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">8</button>
-      <button class="five-btn" onclick="selectPeople(9)" style="color:black; font-size:24px; padding:20px; font-weight:bold;">9</button>
+    
+    <div>
+      <div id="peopleInputDisplay" class="calc-display-box">1</div>
+      <span style="font-size: 22px; font-weight: bold; margin-left: 8px;">人</span>
     </div>
-    <button class="clear-btn" id="closePeopleModal" style="width: 100%; padding: 12px; font-size:16px;">キャンセル</button>
+
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 15px;">
+      <button class="five-btn" onclick="pressPeopleNum(1)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">1</button>
+      <button class="five-btn" onclick="pressPeopleNum(2)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">2</button>
+      <button class="five-btn" onclick="pressPeopleNum(3)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">3</button>
+      <button class="five-btn" onclick="pressPeopleNum(4)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">4</button>
+      <button class="five-btn" onclick="pressPeopleNum(5)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">5</button>
+      <button class="five-btn" onclick="pressPeopleNum(6)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">6</button>
+      <button class="five-btn" onclick="pressPeopleNum(7)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">7</button>
+      <button class="five-btn" onclick="pressPeopleNum(8)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">8</button>
+      <button class="five-btn" onclick="pressPeopleNum(9)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">9</button>
+      <button class="clear-btn" onclick="clearPeopleNum()" style="background:#ef4444; color:white; font-size:18px; padding:12px; font-weight:bold;">クリア</button>
+      <button class="five-btn" onclick="pressPeopleNum(0)" style="color:black; font-size:22px; padding:12px; font-weight:bold;">0</button>
+      <button class="clear-btn" onclick="backspacePeopleNum()" style="background:#f59e0b; color:white; font-size:18px; padding:12px; font-weight:bold;">⌫ 戻る</button>
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+      <button class="clear-btn" id="closePeopleModal" style="flex: 1; padding: 14px; font-size:16px;">キャンセル</button>
+      <button class="clear-btn" onclick="submitPeopleNum()" style="flex: 1; background:#2563eb; color:white; padding: 14px; font-size:18px; font-weight:bold;">確定</button>
+    </div>
   </div>
 </div>
 
+<!-- ★修正：集計画面の構造を変更（ボタンが隠れないように、中身だけをスクロールコンテナで包む） -->
 <div id="statsModal" class="modal">
-  <div class="modal-content">
-    <h2>📊 体験人数集計</h2>
-    <div id="statsContent"></div>
-    <button class="clear-btn" id="closeStats" style="width: 100%; padding: 12px; font-size:16px; margin-top: 15px;">
+  <div class="modal-content" style="max-width: 550px; display: flex; flex-direction: column;">
+    <h2>📊 アテンダンス</h2>
+    <div class="stats-scroll-container" id="statsContent"></div>
+    <button class="clear-btn" id="closeStats" style="width: 100%; padding: 12px; font-size:16px; margin-top: auto;">
       閉じる
     </button>
   </div>
@@ -397,6 +448,9 @@ JSON.parse(
   hourly: {}
 };
 
+// 最後に自動リセットを実行した「日付」を記録する（二重実行を防ぐため）
+let lastResetDate = localStorage.getItem('lastResetDate') || "";
+
 const INITIAL_SECONDS = 30 * 60;
 let waitingList = JSON.parse(localStorage.getItem('waitingList')) || [];
 let waitingCount = waitingList.length;
@@ -416,9 +470,13 @@ JSON.parse(localStorage.getItem('groups')) || {
 let currentAction = null; 
 let currentTargetTimer = null;
 
-// シミュレーターの入力数値を保持する内部変数
+// シミュレーター用の内部変数
 let calcInputString = "1";
-let isFirstInput = true; // 開いた直後の入力を上書きするためのフラグ
+let isFirstInput = true; 
+
+// 人数入力用の内部変数
+let peopleInputString = "1";
+let isFirstPeopleInput = true;
 
 function saveGroups() {
   localStorage.setItem('groups', JSON.stringify(groups));
@@ -520,8 +578,8 @@ function createTimers() {
       } else {
         currentAction = 'directStart';
         currentTargetTimer = timer;
-        document.getElementById('peopleModalTitle').textContent = `No.${timer.id} の体験人数`;
-        document.getElementById('peopleModal').style.display = 'block';
+        document.getElementById('peopleModalTitle').textContent = `${timer.id} 番テーブルの人数`;
+        openPeopleModal();
       }
     };
 
@@ -557,15 +615,17 @@ function createTimers() {
 function startTimerWithPeople(timer, peopleCount) {
   timer.running = true;
 
-  const nowHour = new Date().getHours();
-  stats.totalGroups = (stats.totalGroups || 0) + 1;
-  stats.totalPeople = (stats.totalPeople || 0) + peopleCount;
-  if (!stats.hourly[nowHour]) {
-    stats.hourly[nowHour] = { groups: 0, people: 0 };
+  if (peopleCount > 0) {
+    const nowHour = new Date().getHours();
+    stats.totalGroups = (stats.totalGroups || 0) + 1;
+    stats.totalPeople = (stats.totalPeople || 0) + peopleCount;
+    if (!stats.hourly[nowHour]) {
+      stats.hourly[nowHour] = { groups: 0, people: 0 };
+    }
+    stats.hourly[nowHour].groups++;
+    stats.hourly[nowHour].people += peopleCount;
+    localStorage.setItem('stats', JSON.stringify(stats));
   }
-  stats.hourly[nowHour].groups++;
-  stats.hourly[nowHour].people += peopleCount;
-  localStorage.setItem('stats', JSON.stringify(stats));
 
   timer.startedAt = Date.now();
   timer.endAt = Date.now() + (timer.seconds * 1000);
@@ -575,14 +635,60 @@ function startTimerWithPeople(timer, peopleCount) {
   updateCard(timer);
 }
 
-function selectPeople(num) {
+/* 体験人数モーダルの開閉と入力制御 */
+function openPeopleModal() {
+  peopleInputString = "0";
+  isFirstPeopleInput = true;
+  updatePeopleScreen();
+  document.getElementById('peopleModal').style.display = 'block';
+}
+
+function updatePeopleScreen() {
+  document.getElementById('peopleInputDisplay').textContent = peopleInputString === "" ? "0" : peopleInputString;
+}
+
+function pressPeopleNum(num) {
+  if (isFirstPeopleInput) {
+    peopleInputString = String(num);
+    isFirstPeopleInput = false;
+  } else {
+    if (peopleInputString === "0") {
+      peopleInputString = String(num);
+    } else {
+      if (peopleInputString.length < 3) { 
+        peopleInputString += String(num);
+      }
+    }
+  }
+  updatePeopleScreen();
+}
+
+function clearPeopleNum() {
+  peopleInputString = "0";
+  isFirstPeopleInput = false;
+  updatePeopleScreen();
+}
+
+function backspacePeopleNum() {
+  isFirstPeopleInput = false;
+  if (peopleInputString.length > 1) {
+    peopleInputString = peopleInputString.slice(0, -1);
+  } else {
+    peopleInputString = "0";
+  }
+  updatePeopleScreen();
+}
+
+function submitPeopleNum() {
+  const finalNum = Number(peopleInputString) || 0;
+
   if (currentAction === 'addWaiting') {
-    waitingList.push(num);
+    waitingList.push(finalNum);
     waitingCount = waitingList.length;
     localStorage.setItem('waitingList', JSON.stringify(waitingList));
     localStorage.setItem('waitingCount', waitingCount);
   } else if (currentAction === 'directStart' && currentTargetTimer) {
-    startTimerWithPeople(currentTargetTimer, num);
+    startTimerWithPeople(currentTargetTimer, finalNum);
   }
   
   document.getElementById('peopleModal').style.display = 'none';
@@ -697,6 +803,27 @@ function calculateCustomWait(targetCount) {
 
 // リアルタイム更新ループ
 setInterval(()=>{
+  const nowObj = new Date();
+  const currentHour = nowObj.getHours();
+  const currentMinute = nowObj.getMinutes();
+  const currentSecond = nowObj.getSeconds();
+  const todayString = nowObj.toDateString();
+
+  // 【毎日22:00:00 〜 22:00:05】に自動リセットを実行
+  if (currentHour === 22 && currentMinute === 0 && currentSecond <= 5) {
+    if (lastResetDate !== todayString) {
+      stats = { totalGroups: 0, totalPeople: 0, hourly: {} };
+      localStorage.setItem('stats', JSON.stringify(stats));
+      
+      lastResetDate = todayString;
+      localStorage.setItem('lastResetDate', lastResetDate);
+      
+      if (document.getElementById('statsModal').style.display === 'block') {
+        renderStatsHTML();
+      }
+    }
+  }
+
   timers.forEach(timer=>{
     if (timer.running) {
       const now = Date.now();
@@ -746,7 +873,7 @@ function bindGroupSettings(name) {
 document.getElementById('addWaiting').onclick = () => {
   currentAction = 'addWaiting';
   document.getElementById('peopleModalTitle').textContent = "お待ちになる人数";
-  document.getElementById('peopleModal').style.display = 'block';
+  openPeopleModal();
 };
 
 document.getElementById('removeWaiting').onclick = () => {
@@ -765,19 +892,50 @@ bindGroupSettings('yellow');
 bindGroupSettings('green');
 bindGroupSettings('blue');
 
-document.getElementById('statsButton').onclick = () => {
+// 手動での集計調整（＋－）関数
+function adjustStats(hour, type, amount) {
+  if (!stats.hourly[hour]) {
+    stats.hourly[hour] = { groups: 0, people: 0 };
+  }
+
+  if (type === 'groups') {
+    stats.hourly[hour].groups = Math.max(0, stats.hourly[hour].groups + amount);
+  } else if (type === 'people') {
+    stats.hourly[hour].people = Math.max(0, stats.hourly[hour].people + amount);
+  }
+
+  // 累計データを全時間帯から再計算する
+  let newTotalGroups = 0;
+  let newTotalPeople = 0;
+  for (let h = 0; h < 24; h++) {
+    if (stats.hourly[h]) {
+      newTotalGroups += stats.hourly[h].groups || 0;
+      newTotalPeople += stats.hourly[h].people || 0;
+    }
+  }
+  stats.totalGroups = newTotalGroups;
+  stats.totalPeople = newTotalPeople;
+
+  localStorage.setItem('stats', JSON.stringify(stats));
+  renderStatsHTML(); // 表示をリフレッシュ
+}
+
+// 集計表示用のHTML生成関数
+function renderStatsHTML() {
+  const currentHour = new Date().getHours();
   const statsContent = document.getElementById('statsContent');
+  
   let html = `
-    <p><strong>累計来店:</strong> ${stats.totalGroups || 0} 組 / ${stats.totalPeople || 0} 人</p>
+    <p><strong>累計:</strong> <span id="stat-tg">${stats.totalGroups || 0}</span> 組 / <span id="stat-tp">${stats.totalPeople || 0}</span> 人</p>
     <p style="font-size:14px; color:#666;">（1組あたりの平均: ${stats.totalGroups ? Math.round((stats.totalPeople / stats.totalGroups) * 10) / 10 : 0} 人）</p>
     <hr>
-    <h3>時間帯別の来店集計</h3>
+    <h3>時間帯別のアテンダンス</h3>
     <table style="width:100%; border-collapse: collapse; margin-top:10px; font-size:15px;">
       <thead>
         <tr style="background:#eee; text-align:left;">
-          <th style="padding:8px; border:1px solid #ccc;">時間帯</th>
-          <th style="padding:8px; border:1px solid #ccc;">組数</th>
-          <th style="padding:8px; border:1px solid #ccc;">人数</th>
+          <th style="padding:8px; border:1px solid #ccc; width:30%;">時間帯</th>
+          <th style="padding:8px; border:1px solid #ccc; width:35%;">組数</th>
+          <th style="padding:8px; border:1px solid #ccc; width:35%;">人数</th>
         </tr>
       </thead>
       <tbody>
@@ -785,43 +943,65 @@ document.getElementById('statsButton').onclick = () => {
 
   let hasData = false;
   for (let h = 0; h < 24; h++) {
-    const data = stats.hourly[h];
-    if (data) {
+    // 蓄積データがある時間帯だけループ処理の対象とする
+    if (stats.hourly[h]) {
       hasData = true;
-      const gCount = typeof data === 'number' ? data : (data.groups || 0);
-      const pCount = typeof data === 'number' ? data * 2 : (data.people || 0);
+      const data = stats.hourly[h];
+      const gCount = data.groups || 0;
+      const pCount = data.people || 0;
+
+      let groupControl = "";
+      let peopleControl = "";
+      
+      // 現在時刻の時間帯にのみ、手動調整用ボタンを表示
+      if (h === currentHour) {
+        groupControl = `
+          <div style="margin-top:4px;">
+            <button class="stats-btn plus" onclick="adjustStats(${h}, 'groups', 1)">＋</button>
+            <button class="stats-btn minus" onclick="adjustStats(${h}, 'groups', -1)">－</button>
+          </div>
+        `;
+        peopleControl = `
+          <div style="margin-top:4px;">
+            <button class="stats-btn plus" onclick="adjustStats(${h}, 'people', 1)">＋</button>
+            <button class="stats-btn minus" onclick="adjustStats(${h}, 'people', -1)">－</button>
+          </div>
+        `;
+      }
+
+      let rowStyle = h === currentHour ? "background:#f0f9ff; font-weight:bold;" : "";
 
       html += `
-        <tr>
+        <tr style="${rowStyle}">
           <td style="padding:8px; border:1px solid #ccc;">${h}時 〜 ${h+1}時</td>
-          <td style="padding:8px; border:1px solid #ccc;">${gCount} 組</td>
-          <td style="padding:8px; border:1px solid #ccc;">${pCount} 人</td>
+          <td style="padding:8px; border:1px solid #ccc; vertical-align:top;">
+            <span>${gCount} 組</span>
+            ${groupControl}
+          </td>
+          <td style="padding:8px; border:1px solid #ccc; vertical-align:top;">
+            <span>${pCount} 人</span>
+            ${peopleControl}
+          </td>
         </tr>
       `;
     }
   }
 
+  // 22時のリセット時など、全時間帯データが完全に空のときは「現在の時間帯枠」すら出さず、完全な初期メッセージを出す
   if (!hasData) {
-    html += `<tr><td colspan="3" style="padding:8px; border:1px solid #ccc; text-align:center; color:#999;">本日のデータはありません</td></tr>`;
+    html += `<tr><td colspan="3" style="padding:24px 8px; border:1px solid #ccc; text-align:center; color:#999; font-weight:bold;">本日のデータはありません</td></tr>`;
   }
 
   html += `
       </tbody>
     </table>
-    <button id="resetStats" style="background:#ff4d4d; color:white; margin-top:20px; width:100%; padding:10px; border-radius:10px; font-weight:bold; cursor:pointer;">
-      データをリセットする
-    </button>
+    <p style="font-size:12px; color:#888; text-align:center; margin-top:15px;">※集計データは毎晩22:00に自動でリセットされます。</p>
   `;
   statsContent.innerHTML = html;
+}
 
-  document.getElementById('resetStats').onclick = () => {
-    if (confirm('集計データをすべてリセットしますか？')) {
-      stats = { totalGroups: 0, totalPeople: 0, hourly: {} };
-      localStorage.setItem('stats', JSON.stringify(stats));
-      document.getElementById('statsButton').click();
-    }
-  };
-
+document.getElementById('statsButton').onclick = () => {
+  renderStatsHTML();
   document.getElementById('statsModal').style.display = 'block';
 };
 
@@ -835,7 +1015,7 @@ document.getElementById('closePeopleModal').onclick = () => {
   currentTargetTimer = null;
 };
 
-/* 画面タッチ用の数字入力処理（2桁以上の電卓入力に対応） */
+/* 画面タッチ用の数字入力処理（シミュレーター用） */
 function updateCalcScreen() {
   document.getElementById('calcInputDisplay').textContent = calcInputString === "" ? "0" : calcInputString;
   
@@ -845,7 +1025,6 @@ function updateCalcScreen() {
 }
 
 function pressCalcNum(num) {
-  // 開いた直後の最初の1タップ目は、初期値を上書きする
   if (isFirstInput) {
     calcInputString = String(num);
     isFirstInput = false;
@@ -853,7 +1032,6 @@ function pressCalcNum(num) {
     if (calcInputString === "0") {
       calcInputString = String(num);
     } else {
-      // 最大3桁（999組）までに制限
       if (calcInputString.length < 3) {
         calcInputString += String(num);
       }
@@ -879,9 +1057,8 @@ function backspaceCalcNum() {
 }
 
 document.getElementById('calcButton').onclick = () => {
-  // 開いたときは「現在の待ち組数 + 1」を自動セット
   calcInputString = String(waitingCount + 1);
-  isFirstInput = true; // 新規入力待ち状態にする
+  isFirstInput = true; 
   updateCalcScreen();
   document.getElementById('calcModal').style.display = 'block';
 };
