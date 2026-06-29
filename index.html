@@ -7,8 +7,8 @@
 
 <title>30分タイマー</title>
 
-<link rel="apple-touch-icon" href="IMG_3730.png">
-<link rel="icon" type="image/png" href="IMG_3730.png">
+<link class="apple-touch-icon" href="IMG_3730.png">
+<link class="icon" type="image/png" href="IMG_3730.png">
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -279,9 +279,9 @@ body {
   color: #ef4444;
 }
 
-/* ★修正：集計データ画面のスクロール対応スタイル */
+/* 集計データ画面のスクロール対応スタイル */
 .stats-scroll-container {
-  max-height: 60vh;           /* 画面縦幅の60%を超えたらスクロール */
+  max-height: 55vh;           /* リセットボタン追加に伴い、高さを少し調整 */
   overflow-y: auto;           /* 縦スクロールを有効にする */
   padding-right: 4px;         /* スクロールバー用の余白 */
   margin-bottom: 15px;
@@ -387,14 +387,19 @@ body {
   </div>
 </div>
 
-<!-- ★修正：集計画面の構造を変更（ボタンが隠れないように、中身だけをスクロールコンテナで包む） -->
+<!-- 集計画面 -->
 <div id="statsModal" class="modal">
   <div class="modal-content" style="max-width: 550px; display: flex; flex-direction: column;">
     <h2>📊 アテンダンス</h2>
     <div class="stats-scroll-container" id="statsContent"></div>
-    <button class="clear-btn" id="closeStats" style="width: 100%; padding: 12px; font-size:16px; margin-top: auto;">
-      閉じる
-    </button>
+    <div style="display: flex; gap: 12px; margin-top: auto;">
+      <button class="clear-btn" id="manualResetStats" style="flex: 1; background: #ef4444; color: white; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 16px;">
+        データをリセット
+      </button>
+      <button class="clear-btn" id="closeStats" style="flex: 1; padding: 12px; font-size:16px; border-radius: 16px;">
+        閉じる
+      </button>
+    </div>
   </div>
 </div>
 
@@ -447,9 +452,6 @@ JSON.parse(
   totalPeople: 0,
   hourly: {}
 };
-
-// 最後に自動リセットを実行した「日付」を記録する（二重実行を防ぐため）
-let lastResetDate = localStorage.getItem('lastResetDate') || "";
 
 const INITIAL_SECONDS = 30 * 60;
 let waitingList = JSON.parse(localStorage.getItem('waitingList')) || [];
@@ -801,28 +803,36 @@ function calculateCustomWait(targetCount) {
   return Math.ceil(waitSeconds / 60);
 }
 
-// リアルタイム更新ループ
-setInterval(()=>{
-  const nowObj = new Date();
-  const currentHour = nowObj.getHours();
-  const currentMinute = nowObj.getMinutes();
-  const currentSecond = nowObj.getSeconds();
-  const todayString = nowObj.toDateString();
-
-  // 【毎日22:00:00 〜 22:00:05】に自動リセットを実行
-  if (currentHour === 9 && currentMinute === 55 && currentSecond <= 56) {
-    if (lastResetDate !== todayString) {
-      stats = { totalGroups: 0, totalPeople: 0, hourly: {} };
-      localStorage.setItem('stats', JSON.stringify(stats));
-      
-      lastResetDate = todayString;
-      localStorage.setItem('lastResetDate', lastResetDate);
-      
-      if (document.getElementById('statsModal').style.display === 'block') {
-        renderStatsHTML();
-      }
+// ★22時の自動リセット判定
+function checkAndResetStats() {
+  const now = new Date();
+  
+  const target17 = new Date(now);
+  target17.setHours(17, 0, 0, 0);
+  
+  if (now < target17) {
+    target17.setDate(target17.getDate() - 1);
+  }
+  
+  const lastResetTime = Number(localStorage.getItem('lastResetTime')) || 0;
+  
+  if (target17.getTime() > lastResetTime) {
+    stats = { totalGroups: 0, totalPeople: 0, hourly: {} };
+    localStorage.setItem('stats', JSON.stringify(stats));
+    
+    localStorage.setItem('lastResetTime', Date.now());
+    
+    if (document.getElementById('statsModal').style.display === 'block') {
+      renderStatsHTML();
     }
   }
+}
+
+checkAndResetStats();
+
+// リアルタイム更新ループ
+setInterval(()=>{
+  checkAndResetStats();
 
   timers.forEach(timer=>{
     if (timer.running) {
@@ -904,7 +914,6 @@ function adjustStats(hour, type, amount) {
     stats.hourly[hour].people = Math.max(0, stats.hourly[hour].people + amount);
   }
 
-  // 累計データを全時間帯から再計算する
   let newTotalGroups = 0;
   let newTotalPeople = 0;
   for (let h = 0; h < 24; h++) {
@@ -917,7 +926,7 @@ function adjustStats(hour, type, amount) {
   stats.totalPeople = newTotalPeople;
 
   localStorage.setItem('stats', JSON.stringify(stats));
-  renderStatsHTML(); // 表示をリフレッシュ
+  renderStatsHTML(); 
 }
 
 // 集計表示用のHTML生成関数
@@ -943,7 +952,6 @@ function renderStatsHTML() {
 
   let hasData = false;
   for (let h = 0; h < 24; h++) {
-    // 蓄積データがある時間帯だけループ処理の対象とする
     if (stats.hourly[h]) {
       hasData = true;
       const data = stats.hourly[h];
@@ -953,7 +961,6 @@ function renderStatsHTML() {
       let groupControl = "";
       let peopleControl = "";
       
-      // 現在時刻の時間帯にのみ、手動調整用ボタンを表示
       if (h === currentHour) {
         groupControl = `
           <div style="margin-top:4px;">
@@ -987,7 +994,6 @@ function renderStatsHTML() {
     }
   }
 
-  // 22時のリセット時など、全時間帯データが完全に空のときは「現在の時間帯枠」すら出さず、完全な初期メッセージを出す
   if (!hasData) {
     html += `<tr><td colspan="3" style="padding:24px 8px; border:1px solid #ccc; text-align:center; color:#999; font-weight:bold;">本日のデータはありません</td></tr>`;
   }
@@ -1003,6 +1009,17 @@ function renderStatsHTML() {
 document.getElementById('statsButton').onclick = () => {
   renderStatsHTML();
   document.getElementById('statsModal').style.display = 'block';
+};
+
+// ★手動データリセットボタンのクリックイベント
+document.getElementById('manualResetStats').onclick = () => {
+  if (confirm("これまでの累計データと時間帯別アテンダンスデータをすべて削除します。よろしいですか？")) {
+    stats = { totalGroups: 0, totalPeople: 0, hourly: {} };
+    localStorage.setItem('stats', JSON.stringify(stats));
+    localStorage.setItem('lastResetTime', Date.now()); // リセット時刻を更新して自動判定との競合を防ぐ
+    renderStatsHTML(); // 画面を更新
+    alert("データをリセットしました。");
+  }
 };
 
 document.getElementById('closeStats').onclick = () => {
