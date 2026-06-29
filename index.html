@@ -810,7 +810,7 @@ setInterval(()=>{
   const todayString = nowObj.toDateString();
 
   // 【毎日22:00:00 〜 22:00:05】に自動リセットを実行
-  if (currentHour === 22 && currentMinute === 0 && currentSecond <= 5) {
+  if (currentHour === 9 && currentMinute === 55 && currentSecond <= 56) {
     if (lastResetDate !== todayString) {
       stats = { totalGroups: 0, totalPeople: 0, hourly: {} };
       localStorage.setItem('stats', JSON.stringify(stats));
