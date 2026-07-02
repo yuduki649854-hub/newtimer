@@ -807,16 +807,16 @@ function calculateCustomWait(targetCount) {
 function checkAndResetStats() {
   const now = new Date();
   
-  const target17 = new Date(now);
-  target17.setHours(17, 0, 0, 0);
+  const target22 = new Date(now);
+  target22.setHours(22, 0, 0, 0);
   
-  if (now < target17) {
-    target17.setDate(target17.getDate() - 1);
+  if (now < target22) {
+    target22.setDate(target22.getDate() - 1);
   }
   
   const lastResetTime = Number(localStorage.getItem('lastResetTime')) || 0;
   
-  if (target17.getTime() > lastResetTime) {
+  if (target22.getTime() > lastResetTime) {
     stats = { totalGroups: 0, totalPeople: 0, hourly: {} };
     localStorage.setItem('stats', JSON.stringify(stats));
     
