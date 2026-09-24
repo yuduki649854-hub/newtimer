@@ -12,6 +12,9 @@
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+  
+<!-- manifest.json の読み込み -->
+<link rel="manifest" href="manifest.json">
 
 <style>
 
@@ -54,7 +57,7 @@ body {
 }
 
 /* 上部ステータスバーの全パーツ共通のベースデザイン */
-.status-bar div, #nextWaitTime, .waiting-controls {
+.status-bar div, #nextWaitTime, .waiting-controls, #globalUndoBtn {
   background: white;
   height: 46px;                  /* 縦幅をコンパクトに調整 */
   box-sizing: border-box;
@@ -70,6 +73,22 @@ body {
   font-weight: bold;
   font-size: 18px;
   white-space: nowrap;
+}
+
+/* 上部の一括「戻す」ボタン */
+#globalUndoBtn {
+  padding: 0 16px;
+  font-weight: bold;
+  font-size: 16px;
+  white-space: nowrap;
+  border: none;
+  background: #4b5563;
+  color: white;
+  cursor: pointer;
+  display: none; /* クリアされたタイマーがある時だけ表示 */
+}
+#globalUndoBtn:active {
+  background: #374151;
 }
 
 /* ＋－ボタンを包む白い枠組み */
@@ -281,11 +300,11 @@ body {
 
 /* 集計データ画面のスクロール対応スタイル */
 .stats-scroll-container {
-  max-height: 55vh;           /* リセットボタン追加に伴い、高さを少し調整 */
-  overflow-y: auto;           /* 縦スクロールを有効にする */
-  padding-right: 4px;         /* スクロールバー用の余白 */
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 4px;
   margin-bottom: 15px;
-  -webkit-overflow-scrolling: touch; /* iOSでのスクロールを滑らかにする */
+  -webkit-overflow-scrolling: touch;
 }
 
 </style>
@@ -308,10 +327,13 @@ body {
 
     <div id="nextWaitTime">次の待ち時間 : 0分</div>
     
+    <!-- 直前に消したタイマーを復元する戻すボタン -->
+    <button id="globalUndoBtn">↩ No.1 戻す</button>
+
     <div style="flex-grow: 1; background: transparent; box-shadow: none; height: auto; padding: 0; margin: 0;"></div>
 
     <div id="runningCount">空席 0</div>
-    <div id="warningCount">残り20分 0</div>
+    <div id="warningCount">使用中 0</div>
     <div id="finishedCount">残り10分 0</div>
   </div>
 </div>
@@ -443,6 +465,10 @@ body {
 
 <script>
 
+if ('Notification' in window && Notification.permission !== 'granted') {
+  Notification.requestPermission();
+}
+
 let stats =
 JSON.parse(
   localStorage.getItem('stats')
@@ -461,6 +487,9 @@ const timers =
 JSON.parse(localStorage.getItem('timers')) ||
 [];
 
+// 直前にクリアされたタイマーの復元用変数
+let lastClearedTimerState = JSON.parse(localStorage.getItem('lastClearedTimerState')) || null;
+
 const groups =
 JSON.parse(localStorage.getItem('groups')) || {
   red: { start: 1, end: 5, color: '#FF5D52' },
@@ -472,13 +501,13 @@ JSON.parse(localStorage.getItem('groups')) || {
 let currentAction = null; 
 let currentTargetTimer = null;
 
-// シミュレーター用の内部変数
 let calcInputString = "1";
 let isFirstInput = true; 
 
-// 人数入力用の内部変数
 let peopleInputString = "1";
 let isFirstPeopleInput = true;
+
+let lastNotifiedHourKey = localStorage.getItem('lastNotifiedHourKey') || "";
 
 function saveGroups() {
   localStorage.setItem('groups', JSON.stringify(groups));
@@ -540,7 +569,9 @@ function createTimers() {
         acknowledged: false,
         voiceChecked: false,
         startedAt: null,
-        endAt: null
+        endAt: null,
+        peopleCount: 0,
+        startHour: null
       });
     }
     saveTimers();
@@ -597,28 +628,52 @@ function createTimers() {
     };
 
     document.getElementById(`clear-${timer.id}`).onclick = () => {
+      if (!timer.running) return;
+
+      // 直前の復元用にデータを保持（集計用人数データは保持しつつ、集計自体は減算しない）
+      lastClearedTimerState = {
+        id: timer.id,
+        seconds: timer.seconds,
+        running: timer.running,
+        acknowledged: timer.acknowledged,
+        voiceChecked: timer.voiceChecked,
+        startedAt: timer.startedAt,
+        endAt: timer.endAt,
+        peopleCount: timer.peopleCount,
+        startHour: timer.startHour
+      };
+      localStorage.setItem('lastClearedTimerState', JSON.stringify(lastClearedTimerState));
+
       timer.running = false;
       timer.seconds = INITIAL_SECONDS;
       timer.acknowledged = false;
       timer.voiceChecked = false;
       timer.startedAt = null;
       timer.endAt = null;
+      timer.peopleCount = 0;
+      timer.startHour = null;
+
       saveTimers();
       sortTimers();
       updateCard(timer);
+      updateGlobalUndoButton();
     };
 
     updateCard(timer);
   });
 
   sortTimers();
+  updateGlobalUndoButton();
 }
 
 function startTimerWithPeople(timer, peopleCount) {
   timer.running = true;
+  timer.peopleCount = peopleCount;
+
+  const nowHour = new Date().getHours();
+  timer.startHour = nowHour;
 
   if (peopleCount > 0) {
-    const nowHour = new Date().getHours();
     stats.totalGroups = (stats.totalGroups || 0) + 1;
     stats.totalPeople = (stats.totalPeople || 0) + peopleCount;
     if (!stats.hourly[nowHour]) {
@@ -637,7 +692,45 @@ function startTimerWithPeople(timer, peopleCount) {
   updateCard(timer);
 }
 
-/* 体験人数モーダルの開閉と入力制御 */
+// 画面上部「↩ 戻す」ボタンの制御
+function updateGlobalUndoButton() {
+  const btn = document.getElementById('globalUndoBtn');
+  if (lastClearedTimerState) {
+    btn.textContent = `↩ No.${lastClearedTimerState.id} 戻す`;
+    btn.style.display = 'inline-flex';
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+document.getElementById('globalUndoBtn').onclick = () => {
+  if (!lastClearedTimerState) return;
+
+  const state = lastClearedTimerState;
+  const targetTimer = timers.find(t => t.id === state.id);
+
+  if (!targetTimer) return;
+
+  // 状態復元（クリア時に集計を減らしていないため、加算処理も行わない）
+  targetTimer.running = state.running;
+  targetTimer.acknowledged = state.acknowledged;
+  targetTimer.voiceChecked = state.voiceChecked;
+  targetTimer.startedAt = state.startedAt;
+  targetTimer.endAt = state.endAt;
+  targetTimer.seconds = Math.floor((state.endAt - Date.now()) / 1000);
+  targetTimer.peopleCount = state.peopleCount;
+  targetTimer.startHour = state.startHour;
+
+  // クリア履歴を空にする
+  lastClearedTimerState = null;
+  localStorage.removeItem('lastClearedTimerState');
+
+  saveTimers();
+  sortTimers();
+  updateCard(targetTimer);
+  updateGlobalUndoButton();
+};
+
 function openPeopleModal() {
   peopleInputString = "0";
   isFirstPeopleInput = true;
@@ -753,11 +846,11 @@ function updateCard(timer) {
 
 function updateStatusCounts() {
   const stopped = timers.filter(t => !t.running).length;
-  const twentyMinutes = timers.filter(t => t.running && t.seconds <= 1200).length;
+  const twentyMinutes = timers.filter(t => t.running).length;
   const tenMinutes = timers.filter(t => t.running && t.seconds <= 600).length;
 
   document.getElementById('runningCount').textContent = `空席 : ${stopped}`;
-  document.getElementById('warningCount').textContent = `残り20分 : ${twentyMinutes}`;
+  document.getElementById('warningCount').textContent = `使用中 : ${twentyMinutes}`;
   document.getElementById('finishedCount').textContent = `残り10分 : ${tenMinutes}`;
   document.getElementById('waitingCountDisplay').textContent = `待ち ${waitingCount}組`;
 
@@ -803,7 +896,6 @@ function calculateCustomWait(targetCount) {
   return Math.ceil(waitSeconds / 60);
 }
 
-// ★22時の自動リセット判定
 function checkAndResetStats() {
   const now = new Date();
   
@@ -828,11 +920,38 @@ function checkAndResetStats() {
   }
 }
 
+function checkHourlyNotification() {
+  const now = new Date();
+  const hour = now.getHours();
+  const mins = now.getMinutes();
+  const dateStr = now.toDateString();
+  const currentKey = `${dateStr}-${hour}`;
+
+  if (mins === 0 && hour >= 9 && hour <= 22 && lastNotifiedHourKey !== currentKey) {
+    lastNotifiedHourKey = currentKey;
+    localStorage.setItem('lastNotifiedHourKey', currentKey);
+
+    const targetHour = hour === 0 ? 23 : hour - 1;
+    const hourData = stats.hourly[targetHour] || { groups: 0, people: 0 };
+    
+    const message = `【${hour}:00】アテンダンス記入時間です\n（${targetHour}時台の体験: ${hourData.groups || 0}組 / ${hourData.people || 0}人）`;
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification("アテンダンス通知", {
+        body: message,
+        icon: "IMG_3730.png"
+      });
+    }
+
+    alert(message);
+  }
+}
+
 checkAndResetStats();
 
-// リアルタイム更新ループ
 setInterval(()=>{
   checkAndResetStats();
+  checkHourlyNotification();
 
   timers.forEach(timer=>{
     if (timer.running) {
@@ -902,7 +1021,6 @@ bindGroupSettings('yellow');
 bindGroupSettings('green');
 bindGroupSettings('blue');
 
-// 手動での集計調整（＋－）関数
 function adjustStats(hour, type, amount) {
   if (!stats.hourly[hour]) {
     stats.hourly[hour] = { groups: 0, people: 0 };
@@ -929,7 +1047,6 @@ function adjustStats(hour, type, amount) {
   renderStatsHTML(); 
 }
 
-// 集計表示用のHTML生成関数
 function renderStatsHTML() {
   const currentHour = new Date().getHours();
   const statsContent = document.getElementById('statsContent');
@@ -1011,13 +1128,12 @@ document.getElementById('statsButton').onclick = () => {
   document.getElementById('statsModal').style.display = 'block';
 };
 
-// ★手動データリセットボタンのクリックイベント
 document.getElementById('manualResetStats').onclick = () => {
   if (confirm("これまでの累計データと時間帯別アテンダンスデータをすべて削除します。よろしいですか？")) {
     stats = { totalGroups: 0, totalPeople: 0, hourly: {} };
     localStorage.setItem('stats', JSON.stringify(stats));
-    localStorage.setItem('lastResetTime', Date.now()); // リセット時刻を更新して自動判定との競合を防ぐ
-    renderStatsHTML(); // 画面を更新
+    localStorage.setItem('lastResetTime', Date.now());
+    renderStatsHTML();
     alert("データをリセットしました。");
   }
 };
@@ -1032,7 +1148,6 @@ document.getElementById('closePeopleModal').onclick = () => {
   currentTargetTimer = null;
 };
 
-/* 画面タッチ用の数字入力処理（シミュレーター用） */
 function updateCalcScreen() {
   document.getElementById('calcInputDisplay').textContent = calcInputString === "" ? "0" : calcInputString;
   
@@ -1085,8 +1200,16 @@ document.getElementById('closeCalc').onclick = () => {
 };
 
 createTimers();
+
+// Service Worker の登録処理
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then((reg) => console.log('Service Worker 登録成功:', reg.scope))
+      .catch((err) => console.log('Service Worker 登録失敗:', err));
+  });
+}
+
 updateStatusCounts();
 </script>
 
-</body>
-</html>
